@@ -1,0 +1,57 @@
+name: Release Binary
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      build_version:
+        description: "Build version (e.g., v1.0.0)"
+        required: false
+        default: "v0.0.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Go
+        uses: actions/setup-go@v5.1.0
+        with:
+          go-version: 1.23.4
+      # 构建 Windows 二进制文件
+      - name: Build Windows Binary
+        run: |
+          mkdir -p dist
+          GOOS=windows GOARCH=amd64 go build -o dist/windows-amd64/tron-addr-gen.exe main.go
+
+      - name: Build Linux Binary
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -o dist/linux-amd64/tron-addr-gen main.go
+
+      - name: Build macOS Binary
+        run: |
+          mkdir -p dist
+          GOOS=darwin GOARCH=arm64 go build -o dist/darwin-arm64/tron-addr-gen main.go
+
+      - name: Package Binaries
+        run: |
+          cd dist
+          zip windows-amd64.zip windows-amd64/tron-addr-gen.exe
+          zip linux-amd64.zip linux-amd64/tron-addr-gen
+          zip darwin-arm64.zip darwin-arm64/tron-addr-gen
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2.1.0
+        with:
+          files: |
+            dist/windows-amd64.zip
+            dist/linux-amd64.zip
+            dist/darwin-arm64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
